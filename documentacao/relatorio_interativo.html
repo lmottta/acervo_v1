@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Interativo: API do Módulo Acervo SPUnet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --code-bg: #0f172a; /* slate-900 */
+        }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; }
+        .endpoint-url { word-break: break-all; }
+        .tab-button.active { border-color: #0ea5e9; color: #0ea5e9; font-weight: 600; } /* sky-500 */
+        
+        /* Estilos da Simulação de Arquitetura */
+        .sim-container { min-height: 450px; }
+        .sim-area { position: relative; height: 200px; background-color: #1e293b; border-radius: 0.5rem; overflow: hidden; border: 1px solid #334155; } /* slate-800, slate-700 */
+        .sim-request { position: absolute; top: 20px; left: -50px; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; color: white; transition: all 0.5s ease-in-out; z-index: 10; }
+        .sim-server, .sim-event-loop { position: absolute; top: 50%; left: 40%; transform: translate(-50%, -50%); width: 80px; height: 80px; border-radius: 0.25rem; display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 0.75rem; border: 2px dashed #475569; transition: background-color 0.3s; } /* slate-600 */
+        .sim-thread { width: 90%; height: 18px; margin: 1px 0; background-color: #334155; border-radius: 3px; font-size: 0.6rem; color: #cbd5e1; transition: all 0.3s ease; text-align: center;} /* slate-700, slate-300 */
+        .sim-thread.busy { background-color: #dc2626; }
+        .sim-event-loop.busy { background-color: #0284c7; } /* sky-600 */
+        .sim-db { position: absolute; top: 50%; right: 10%; transform: translateY(-50%); font-size: 3rem; opacity: 0.6; }
+        
+        /* Estilos do API Tester e Code Snippets */
+        .code-snippet-tab.active { background-color: #0ea5e9; color: white; } /* sky-500 */
+        pre { background: var(--code-bg)!important; padding: 1em; margin: 0; overflow: auto; border-radius: 0 0 0.3em 0.3em; font-size: 0.875rem;}
+        code { font-family: 'Courier New', Courier, monospace; }
+        .json-response { white-space: pre-wrap; font-family: monospace; background-color: var(--code-bg); padding: 1rem; border-radius: 0.5rem; max-height: 200px; overflow-y: auto; }
+        
+        /* Estilos do Pacing/Rate Limit viz */
+        .pacing-viz-area { height: 80px; }
+        .req-dot { width: 20px; height: 20px; border-radius: 50%; position: absolute; top: 50%; transform: translateY(-50%); transition: all 1s linear; }
+        .server-line { width: 4px; height: 60%; background: #475569; position: absolute; right: 15%; top: 20%; } /* slate-600 */
+        .server-line.error { background: #ef4444; }
+
+        /* Animação para <details> */
+        details[open] > div {
+            animation: fade-in 0.5s ease-in-out;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-300 antialiased">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-emerald-400">Relatório Interativo</h1>
+            <p class="text-xl text-sky-400 mt-2">Análise de Desempenho da API do Módulo Acervo do SPUnet</p>
+        </header>
+
+        <div class="mb-8 flex justify-center border-b border-slate-700">
+            <button id="tab-btn-endpoints" class="tab-button active text-lg py-3 px-6 border-b-2 border-transparent transition-colors duration-300">Endpoints da API</button>
+            <button id="tab-btn-performance" class="tab-button text-lg py-3 px-6 border-b-2 border-transparent transition-colors duration-300">Análise de Desempenho</button>
+        </div>
+
+        <main>
+            <!-- Seção 1: Endpoints da API -->
+            <section id="tab-content-endpoints">
+                <div class="space-y-8">
+                    <!-- Endpoint 1 -->
+                    <div class="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
+                        <h3 class="text-2xl font-semibold text-white mb-3">1. Obtenção do Total de Páginas</h3>
+                        <div class="bg-slate-900 rounded-md p-3 flex items-center justify-between mb-2"><code class="text-green-400 endpoint-url">https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-acervo/totalPaginas</code></div>
+                        <div class="grid md:grid-cols-2 gap-6 mt-4">
+                            <div>
+                                <h4 class="font-semibold text-white mb-2">Simulador de Requisição</h4>
+                                <div class="flex items-center space-x-2">
+                                    <label for="ep1-tamanho" class="text-sm">tamanho=</label>
+                                    <input type="number" id="ep1-tamanho" value="200" oninput="updateCodeSnippets(1)" class="bg-slate-700 text-white rounded-md px-2 py-1 w-24">
+                                    <button onclick="simulateEndpoint(1)" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-1 px-3 rounded-md transition-colors text-sm">Testar</button>
+                                </div>
+                                <h4 class="font-semibold text-white mt-4 mb-2">Resposta</h4>
+                                <div id="ep1-response" class="json-response text-slate-400">{...}</div>
+                            </div>
+                            <div>
+                                <div class="flex space-x-1 rounded-t-lg bg-slate-900 p-2">
+                                    <button class="code-snippet-tab active text-sm px-3 py-1 rounded-md" data-target="ep1-curl">cURL</button>
+                                    <button class="code-snippet-tab text-sm px-3 py-1 rounded-md" data-target="ep1-js">JS</button>
+                                    <button class="code-snippet-tab text-sm px-3 py-1 rounded-md" data-target="ep1-py">Python</button>
+                                </div>
+                                <div id="ep1-curl" class="code-snippet-content"><pre><code class="language-bash"></code></pre></div>
+                                <div id="ep1-js" class="code-snippet-content hidden"><pre><code class="language-javascript"></code></pre></div>
+                                <div id="ep1-py" class="code-snippet-content hidden"><pre><code class="language-python"></code></pre></div>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Endpoint 2 Aprimorado -->
+                    <div class="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
+                        <h3 class="text-2xl font-semibold text-white mb-3">2. Download de Dados em Lote (CSV)</h3>
+                        <p class="text-slate-400 mb-4">Este endpoint é o coração do processo de extração de dados em massa. A simulação abaixo demonstra o fluxo de trabalho completo: obter o total de páginas e, em seguida, iterar para baixar cada página sequencialmente.</p>
+                        
+                        <div class="bg-slate-900/50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-white mb-3 text-lg">Simulação de Processo em Lote</h4>
+                            <div class="flex flex-wrap items-center gap-4 mb-4">
+                                <button id="batch-download-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-md transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="fas fa-play"></i> Iniciar Download em Lote
+                                </button>
+                                <div class="flex items-center gap-2 text-sm text-slate-400">
+                                    <label for="batch-page-size">Tamanho da Página:</label>
+                                    <input type="number" id="batch-page-size" value="200" class="bg-slate-700 text-white rounded-md px-2 py-1 w-24">
+                                </div>
+                            </div>
+                    
+                            <div class="w-full bg-slate-700 rounded-full h-2.5 mb-2">
+                                <div id="batch-progress-bar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <div id="batch-status" class="text-center text-sm text-slate-300 mb-4 h-5">Aguardando início...</div>
+                    
+                            <div id="batch-log" class="json-response h-32 text-xs">
+                                <p class="text-slate-500">O log do processo aparecerá aqui.</p>
+                            </div>
+                        </div>
+                    
+                        <details class="mt-4">
+                            <summary class="cursor-pointer text-sky-400 hover:text-sky-300 font-semibold">Mostrar/Ocultar Detalhes Técnicos (API Tester e Código)</summary>
+                            <div class="mt-4">
+                                <div class="bg-slate-900 rounded-md p-3 flex items-center justify-between mb-4"><code class="text-green-400 endpoint-url">https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-acervo/csv</code></div>
+                                <div class="grid md:grid-cols-2 gap-6">
+                                     <div>
+                                        <h4 class="font-semibold text-white mb-2">Teste de Endpoint Individual</h4>
+                                        <div class="space-y-2">
+                                            <div class="flex items-center space-x-2">
+                                                <label for="ep2-tamanho" class="text-sm w-16">tamanho=</label>
+                                                <input type="number" id="ep2-tamanho" value="200" oninput="updateCodeSnippets(2)" class="bg-slate-700 text-white rounded-md px-2 py-1 w-24">
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <label for="ep2-pagina" class="text-sm w-16">pagina=</label>
+                                                <input type="number" id="ep2-pagina" value="0" oninput="updateCodeSnippets(2)" class="bg-slate-700 text-white rounded-md px-2 py-1 w-24">
+                                                <button onclick="simulateEndpoint(2)" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-1 px-3 rounded-md transition-colors text-sm">Testar</button>
+                                            </div>
+                                        </div>
+                                        <h4 class="font-semibold text-white mt-4 mb-2">Resposta (Pré-visualização CSV)</h4>
+                                        <div id="ep2-response" class="json-response text-slate-400">...</div>
+                                    </div>
+                                    <div>
+                                        <div class="flex space-x-1 rounded-t-lg bg-slate-900 p-2">
+                                            <button class="code-snippet-tab active text-sm px-3 py-1 rounded-md" data-target="ep2-curl">cURL</button>
+                                            <button class="code-snippet-tab text-sm px-3 py-1 rounded-md" data-target="ep2-js">JS</button>
+                                            <button class="code-snippet-tab text-sm px-3 py-1 rounded-md" data-target="ep2-py">Python</button>
+                                        </div>
+                                        <div id="ep2-curl" class="code-snippet-content"><pre><code class="language-bash"></code></pre></div>
+                                        <div id="ep2-js" class="code-snippet-content hidden"><pre><code class="language-javascript"></code></pre></div>
+                                        <div id="ep2-py" class="code-snippet-content hidden"><pre><code class="language-python"></code></pre></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                     <!-- Endpoint 3 -->
+                    <div class="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
+                        <h3 class="text-2xl font-semibold text-white mb-3">3. Obtenção de um Item Específico</h3>
+                        <div class="bg-slate-900 rounded-md p-3 flex items-center justify-between mb-2"><code class="text-green-400 endpoint-url">https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-acervo/{id}</code></div>
+                        <div class="grid md:grid-cols-2 gap-6 mt-4">
+                            <div>
+                                <h4 class="font-semibold text-white mb-2">Simulador de Requisição</h4>
+                                <div class="flex items-center space-x-2">
+                                    <label for="ep3-id" class="text-sm">id_item=</label>
+                                    <input type="text" id="ep3-id" value="12345" oninput="updateCodeSnippets(3)" class="bg-slate-700 text-white rounded-md px-2 py-1 w-24">
+                                    <button onclick="simulateEndpoint(3)" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-1 px-3 rounded-md transition-colors text-sm">Testar</button>
+                                </div>
+                                <h4 class="font-semibold text-white mt-4 mb-2">Resposta</h4>
+                                <div id="ep3-response" class="json-response text-slate-400">{...}</div>
+                            </div>
+                            <div>
+                                <div class="flex space-x-1 rounded-t-lg bg-slate-900 p-2">
+                                    <button class="code-snippet-tab active text-sm px-3 py-1 rounded-md" data-target="ep3-curl">cURL</button>
+                                    <button class="code-snippet-tab text-sm px-3 py-1 rounded-md" data-target="ep3-js">JS</button>
+                                    <button class="code-snippet-tab text-sm px-3 py-1 rounded-md" data-target="ep3-py">Python</button>
+                                </div>
+                                <div id="ep3-curl" class="code-snippet-content"><pre><code class="language-bash"></code></pre></div>
+                                <div id="ep3-js" class="code-snippet-content hidden"><pre><code class="language-javascript"></code></pre></div>
+                                <div id="ep3-py" class="code-snippet-content hidden"><pre><code class="language-python"></code></pre></div>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Endpoint 4 -->
+                    <div class="bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-700">
+                        <h3 class="text-2xl font-semibold text-white mb-3">4. Obtenção de um Arquivo Anexo</h3>
+                        <div class="bg-slate-900 rounded-md p-3 flex items-center justify-between mb-2"><code class="text-green-400 endpoint-url">https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-anexo/{id}</code></div>
+                        <div class="grid md:grid-cols-2 gap-6 mt-4">
+                            <div>
+                                <h4 class="font-semibold text-white mb-2">Simulador de Requisição</h4>
+                                <div class="flex items-center space-x-2">
+                                    <label for="ep4-id" class="text-sm">id_anexo=</label>
+                                    <input type="text" id="ep4-id" value="67890" oninput="updateCodeSnippets(4)" class="bg-slate-700 text-white rounded-md px-2 py-1 w-24">
+                                    <button onclick="simulateEndpoint(4)" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-1 px-3 rounded-md transition-colors text-sm">Testar</button>
+                                </div>
+                                <h4 class="font-semibold text-white mt-4 mb-2">Resposta</h4>
+                                <div id="ep4-response" class="json-response text-slate-400">{...}</div>
+                            </div>
+                            <div>
+                                <div class="flex space-x-1 rounded-t-lg bg-slate-900 p-2">
+                                    <button class="code-snippet-tab active text-sm px-3 py-1 rounded-md" data-target="ep4-curl">cURL</button>
+                                    <button class="code-snippet-tab text-sm px-3 py-1 rounded-md" data-target="ep4-js">JS</button>
+                                    <button class="code-snippet-tab text-sm px-3 py-1 rounded-md" data-target="ep4-py">Python</button>
+                                </div>
+                                <div id="ep4-curl" class="code-snippet-content"><pre><code class="language-bash"></code></pre></div>
+                                <div id="ep4-js" class="code-snippet-content hidden"><pre><code class="language-javascript"></code></pre></div>
+                                <div id="ep4-py" class="code-snippet-content hidden"><pre><code class="language-python"></code></pre></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção 2: Análise de Desempenho -->
+            <section id="tab-content-performance" class="hidden">
+                 <div class="space-y-12">
+                    <!-- Lado do Cliente -->
+                    <div>
+                        <h2 class="text-3xl font-bold text-center text-white mb-8">Otimizações do Lado do Cliente</h2>
+                        <div class="grid md:grid-cols-2 gap-8">
+                             <!-- Pacing e Rate Limit -->
+                            <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
+                                <h3 class="text-xl font-semibold text-white mb-3 flex items-center justify-between">
+                                    <span>Pacing & Rate Limiting</span>
+                                    <div class="flex items-center">
+                                        <span class="text-sm mr-2">Pacing</span>
+                                        <label for="pacing-toggle" class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" value="" id="pacing-toggle" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                        </label>
+                                    </div>
+                                </h3>
+                                <p class="text-slate-400 mb-4">Sem "pacing", requisições rápidas podem levar a erros <code class="text-red-400">429</code>. Ative para ver a diferença.</p>
+                                <div class="bg-slate-900/50 p-4 rounded-lg">
+                                    <button id="pacing-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors">Enviar Requisição Rápida</button>
+                                    <div class="pacing-viz-area relative bg-slate-800 mt-4 rounded-md overflow-hidden" id="pacing-viz">
+                                        <div class="server-line"></div>
+                                        <p class="absolute top-1 right-1 text-xs text-slate-500">Servidor</p>
+                                    </div>
+                                </div>
+                            </div>
+                             <!-- Exponential Backoff -->
+                             <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
+                                <h3 class="text-xl font-semibold text-white mb-3">Tentativa com Backoff Exponencial</h3>
+                                <p class="text-slate-400 mb-4">Se uma requisição falhar, espere e dobre o tempo de espera a cada nova falha para não sobrecarregar o serviço.</p>
+                                <div class="bg-slate-900/50 p-4 rounded-lg">
+                                    <button id="backoff-btn" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-md transition-colors">Simular Falha de API</button>
+                                    <p id="backoff-status" class="mt-3 text-center text-sm text-yellow-400 h-5"></p>
+                                    <div id="backoff-chart" class="mt-2 h-24 flex items-end justify-center space-x-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lado do Servidor -->
+                    <div>
+                        <h2 class="text-3xl font-bold text-center text-white mb-8">Melhorias do Lado do Servidor</h2>
+                        <!-- Nova Simulação de Arquitetura -->
+                        <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
+                             <h3 class="text-2xl font-bold text-center text-white mb-2">Simulação: Arquitetura Síncrona vs. Assíncrona</h3>
+                             <p class="text-center text-slate-400 max-w-4xl mx-auto mb-6">Observe a diferença de performance. O modelo síncrono usa um "pool" de threads que bloqueiam em operações de I/O, enquanto o assíncrono usa um "event loop" para gerenciar múltiplas operações sem bloquear.</p>
+                             
+                             <div class="flex flex-wrap justify-center items-center gap-4 mb-6 bg-slate-900/50 p-3 rounded-lg">
+                                 <button id="add-request-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105"><i class="fas fa-plus mr-2"></i>Requisição</button>
+                                 <div class="flex items-center space-x-2">
+                                     <label for="io-slider" class="text-sm font-medium">Lentidão do I/O:</label>
+                                     <input id="io-slider" type="range" min="1000" max="5000" value="3000" step="500" class="w-32 h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                                     <span id="io-value" class="text-sm text-sky-400 font-mono">3.0s</span>
+                                 </div>
+                                 <button id="reset-sim-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-transform transform hover:scale-105"><i class="fas fa-redo mr-2"></i>Resetar</button>
+                             </div>
+
+                             <div class="grid md:grid-cols-2 gap-8">
+                                 <!-- Modelo Síncrono -->
+                                 <div class="sim-container flex flex-col space-y-4">
+                                     <h4 class="text-xl font-semibold text-center text-white">Modelo Síncrono (Blocking)</h4>
+                                     <div class="sim-area" id="blocking-sim-area">
+                                         <div class="sim-server" id="blocking-server">
+                                             <div class="sim-thread">T1</div><div class="sim-thread">T2</div><div class="sim-thread">T3</div><div class="sim-thread">T4</div>
+                                         </div>
+                                         <div class="sim-db">🗄️</div>
+                                     </div>
+                                      <div class="text-center text-sm space-x-4">
+                                         <span>Concluídas: <b id="blocking-completed" class="text-green-400">0</b></span>
+                                         <span>Em Fila: <b id="blocking-queued" class="text-yellow-400">0</b></span>
+                                         <span>Avg. Time: <b id="blocking-avg-time" class="text-cyan-400">0ms</b></span>
+                                     </div>
+                                 </div>
+                                 <!-- Modelo Assíncrono -->
+                                  <div class="sim-container flex flex-col space-y-4">
+                                     <h4 class="text-xl font-semibold text-center text-white">Modelo Assíncrono (Non-Blocking)</h4>
+                                     <div class="sim-area" id="non-blocking-sim-area">
+                                         <div class="sim-event-loop" id="event-loop"><span>Event Loop</span></div>
+                                         <div class="sim-db">🗄️</div>
+                                     </div>
+                                     <div class="text-center text-sm space-x-4">
+                                         <span>Concluídas: <b id="non-blocking-completed" class="text-green-400">0</b></span>
+                                         <span>Em Progresso: <b id="non-blocking-progress" class="text-yellow-400">0</b></span>
+                                         <span>Avg. Time: <b id="non-blocking-avg-time" class="text-cyan-400">0ms</b></span>
+                                     </div>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                 </div>
+            </section>
+        </main>
+        
+        <footer class="text-center mt-12 text-slate-500 text-sm">
+            <p>Relatório gerado interativamente para análise de API.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Lógica das Abas
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('main > section');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    const targetId = button.id.replace('-btn-', '-content-');
+                    tabContents.forEach(content => content.id === targetId ? content.classList.remove('hidden') : content.classList.add('hidden'));
+                });
+            });
+
+            // Lógica das Abas de Código
+            document.querySelectorAll('.code-snippet-tab').forEach(button => {
+                button.addEventListener('click', () => {
+                    const parent = button.closest('.grid > div');
+                    parent.querySelectorAll('.code-snippet-tab').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    parent.querySelectorAll('.code-snippet-content').forEach(content => content.classList.add('hidden'));
+                    parent.querySelector(`#${button.dataset.target}`).classList.remove('hidden');
+                });
+            });
+
+            // Inicializa todos os snippets de código e simuladores
+            for (let i = 1; i <= 4; i++) {
+                updateCodeSnippets(i);
+                simulateEndpoint(i);
+            }
+
+            // Simulação de Download em Lote
+            const batchDownloadBtn = document.getElementById('batch-download-btn');
+            const batchProgressBar = document.getElementById('batch-progress-bar');
+            const batchStatus = document.getElementById('batch-status');
+            const batchLog = document.getElementById('batch-log');
+            const batchPageSizeInput = document.getElementById('batch-page-size');
+            let isBatchDownloading = false;
+
+            function logToBatch(message, type = 'info') {
+                const colors = { info: 'text-slate-400', success: 'text-green-400', error: 'text-red-400', step: 'text-sky-400' };
+                if (batchLog.querySelector('p.text-slate-500')) { batchLog.innerHTML = ''; }
+                const p = document.createElement('p');
+                const timestamp = new Date().toLocaleTimeString();
+                p.innerHTML = `<span class="text-slate-500">[${timestamp}]</span> <span class="${colors[type]}">${message}</span>`;
+                batchLog.appendChild(p);
+                batchLog.scrollTop = batchLog.scrollHeight;
+            }
+
+            const delay = ms => new Promise(res => setTimeout(res, ms));
+
+            batchDownloadBtn.addEventListener('click', async () => {
+                if (isBatchDownloading) return;
+
+                isBatchDownloading = true;
+                batchDownloadBtn.disabled = true;
+                batchDownloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+                batchProgressBar.style.width = '0%';
+                batchStatus.textContent = 'Iniciando...';
+                logToBatch('Iniciando processo de download em lote...', 'step');
+
+                await delay(500);
+                const pageSize = parseInt(batchPageSizeInput.value) || 200;
+                logToBatch(`1. Chamando endpoint /totalPaginas com tamanho=${pageSize}...`);
+                await delay(800);
+                
+                const totalRegistros = 18543;
+                const totalPaginas = Math.ceil(totalRegistros / pageSize);
+
+                logToBatch(`   - Sucesso! Total de páginas a baixar: ${totalPaginas}`, 'success');
+                batchProgressBar.style.width = '5%';
+                
+                await delay(500);
+                logToBatch('2. Iniciando loop de download das páginas CSV...', 'step');
+
+                for (let i = 0; i < totalPaginas; i++) {
+                    const paginaAtual = i + 1;
+                    batchStatus.textContent = `Baixando página ${paginaAtual} de ${totalPaginas}...`;
+                    logToBatch(`   - Baixando página ${paginaAtual}/${totalPaginas}...`);
+                    await delay(Math.random() * 200 + 100); 
+                    const progress = 5 + ((paginaAtual / totalPaginas) * 95);
+                    batchProgressBar.style.width = `${progress}%`;
+                }
+
+                await delay(500);
+                logToBatch('Processo concluído com sucesso!', 'success');
+                batchStatus.textContent = 'Download em lote concluído!';
+                batchDownloadBtn.disabled = false;
+                batchDownloadBtn.innerHTML = '<i class="fas fa-play"></i> Iniciar Download em Lote';
+                isBatchDownloading = false;
+            });
+        });
+
+        function updateCodeSnippets(ep) {
+            if (ep === 1) {
+                const tamanho = document.getElementById('ep1-tamanho').value || 200;
+                const url = `https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-acervo/totalPaginas`;
+                document.querySelector('#ep1-curl pre code').textContent = `curl "${url}?tamanho=${tamanho}"`;
+                document.querySelector('#ep1-js pre code').textContent = `fetch('${url}?tamanho=${tamanho}')\n  .then(res => res.json())\n  .then(console.log);`;
+                document.querySelector('#ep1-py pre code').textContent = `import requests\n\nurl = "${url}"\nparams = {"tamanho": ${tamanho}}\nresponse = requests.get(url, params=params)\nprint(response.json())`;
+            } else if (ep === 2) {
+                const tamanho = document.getElementById('ep2-tamanho').value || 200;
+                const pagina = document.getElementById('ep2-pagina').value || 0;
+                const url = `https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-acervo/csv`;
+                document.querySelector('#ep2-curl pre code').textContent = `curl "${url}?tamanho=${tamanho}&pagina=${pagina}"`;
+                document.querySelector('#ep2-js pre code').textContent = `fetch('${url}?tamanho=${tamanho}&pagina=${pagina}')\n  .then(res => res.text())\n  .then(console.log);`;
+                document.querySelector('#ep2-py pre code').textContent = `import requests\n\nurl = "${url}"\nparams = {"tamanho": ${tamanho}, "pagina": ${pagina}}\nresponse = requests.get(url, params=params)\nprint(response.text)`;
+            } else if (ep === 3) {
+                const id = document.getElementById('ep3-id').value || 12345;
+                const url = `https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-acervo/${id}`;
+                document.querySelector('#ep3-curl pre code').textContent = `curl "${url}"`;
+                document.querySelector('#ep3-js pre code').textContent = `fetch('${url}')\n  .then(res => res.json())\n  .then(console.log);`;
+                document.querySelector('#ep3-py pre code').textContent = `import requests\n\nresponse = requests.get("${url}")\nprint(response.json())`;
+            } else if (ep === 4) {
+                const id = document.getElementById('ep4-id').value || 67890;
+                const url = `https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-anexo/${id}`;
+                document.querySelector('#ep4-curl pre code').textContent = `curl "${url}"`;
+                document.querySelector('#ep4-js pre code').textContent = `fetch('${url}')\n  .then(res => res.json())\n  .then(console.log);`;
+                document.querySelector('#ep4-py pre code').textContent = `import requests\n\nresponse = requests.get("${url}")\nprint(response.json())`;
+            }
+        }
+
+        function simulateEndpoint(ep) {
+            const loadingHtml = `<span class="text-slate-500">carregando...</span>`;
+            if (ep === 1) {
+                const tamanho = document.getElementById('ep1-tamanho').value || 200;
+                const responseEl = document.getElementById('ep1-response');
+                responseEl.innerHTML = loadingHtml;
+                setTimeout(() => {
+                    const totalRegistros = 18543;
+                    const totalPaginas = Math.ceil(totalRegistros / parseInt(tamanho));
+                    responseEl.innerHTML = `<span class="text-yellow-400">{</span>\n  <span class="text-purple-400">"totalPaginas"</span>: <span class="text-green-400">${totalPaginas}</span>\n<span class="text-yellow-400">}</span>`;
+                }, 300);
+            } else if (ep === 2) {
+                const tamanho = document.getElementById('ep2-tamanho').value || 200;
+                const pagina = document.getElementById('ep2-pagina').value || 0;
+                const responseEl = document.getElementById('ep2-response');
+                responseEl.innerHTML = loadingHtml;
+                setTimeout(() => {
+                    const startId = parseInt(pagina) * parseInt(tamanho);
+                    let csv = `ID,Data,Descricao,URL\n`;
+                    csv += `${startId + 1},2023-10-27,"Descrição do item ${startId + 1}","https://..."\n`;
+                    csv += `${startId + 2},2023-10-27,"Descrição do item ${startId + 2}","https://..."\n`;
+                    csv += `...`;
+                    responseEl.textContent = csv;
+                }, 300);
+            } else if (ep === 3) {
+                 const id = document.getElementById('ep3-id').value || '12345';
+                const responseEl = document.getElementById('ep3-response');
+                responseEl.innerHTML = loadingHtml;
+                setTimeout(() => {
+                    const data = {
+                        id: parseInt(id) || 12345,
+                        titulo: `Documento de Processo ${id}`,
+                        dataCriacao: "2023-05-12T14:30:00Z",
+                        arquivosAnexos: [
+                            { id: 67890, nome: "termo_de_abertura.pdf", tipo: "application/pdf" },
+                            { id: 67891, nome: "planilha_custos.xlsx", tipo: "application/vnd.ms-excel" }
+                        ]
+                    };
+                    responseEl.textContent = JSON.stringify(data, null, 2);
+                }, 300);
+            } else if (ep === 4) {
+                const id = document.getElementById('ep4-id').value || '67890';
+                const responseEl = document.getElementById('ep4-response');
+                responseEl.innerHTML = loadingHtml;
+                setTimeout(() => {
+                    const data = {
+                        id: parseInt(id) || 67890,
+                        nomeArquivo: "termo_de_abertura.pdf",
+                        tamanhoBytes: 123456,
+                        urlDownload: `https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-anexo/${id}/download`
+                    };
+                    responseEl.textContent = JSON.stringify(data, null, 2);
+                }, 300);
+            }
+        }
+        
+        // Simulação Pacing / Rate Limit
+        const pacingBtn = document.getElementById('pacing-btn');
+        const pacingViz = document.getElementById('pacing-viz');
+        const pacingToggle = document.getElementById('pacing-toggle');
+        let lastClickTime = 0;
+        pacingBtn.addEventListener('click', () => {
+            const isPacingEnabled = pacingToggle.checked;
+            const now = Date.now();
+            if(!isPacingEnabled && now - lastClickTime < 300) {
+                const serverLine = pacingViz.querySelector('.server-line');
+                serverLine.classList.add('error');
+                setTimeout(() => serverLine.classList.remove('error'), 500);
+                return;
+            }
+            lastClickTime = now;
+
+            const dot = document.createElement('div');
+            dot.className = 'req-dot';
+            dot.style.left = '5%';
+            const isSuccess = isPacingEnabled || Math.random() > 0.2;
+            dot.style.backgroundColor = isSuccess ? '#10b981' : '#ef4444';
+            pacingViz.appendChild(dot);
+            setTimeout(() => {
+                dot.style.left = '80%';
+                setTimeout(() => dot.remove(), 1000);
+            }, 100);
+        });
+
+        // Simulação Exponential Backoff
+        const backoffBtn = document.getElementById('backoff-btn');
+        const backoffStatus = document.getElementById('backoff-status');
+        const backoffChart = document.getElementById('backoff-chart');
+        let retryCount = 0;
+        let isBackoffRunning = false;
+        backoffBtn.addEventListener('click', function simulateBackoff() {
+            if(isBackoffRunning) return;
+            isBackoffRunning = true;
+            retryCount = 0;
+            backoffChart.innerHTML = '';
+            
+            function attempt() {
+                retryCount++;
+                const delay = 1000 * Math.pow(2, retryCount - 1);
+                
+                backoffBtn.disabled = true;
+                updateBackoffChart(delay);
+
+                if (retryCount >= 3) {
+                    backoffStatus.textContent = 'Sucesso! Conexão restaurada.';
+                    setTimeout(() => {
+                        backoffStatus.textContent = '';
+                        backoffChart.innerHTML = '';
+                        backoffBtn.disabled = false;
+                        isBackoffRunning = false;
+                    }, 2000);
+                } else {
+                    backoffStatus.textContent = `Falha. Tentando em ${delay / 1000}s...`;
+                    setTimeout(attempt, delay);
+                }
+            }
+            attempt();
+        });
+
+        function updateBackoffChart(delay) {
+            const bar = document.createElement('div');
+            const height = Math.min(80, (delay / 4000) * 80);
+            bar.style.height = `${height}px`;
+            bar.style.width = '30px';
+            bar.style.backgroundColor = '#0ea5e9'; // sky-500
+            bar.className = 'flex items-end justify-center text-xs pb-1 rounded-t-sm';
+            bar.innerHTML = `<span>${delay/1000}s</span>`;
+            backoffChart.appendChild(bar);
+        }
+
+        // --- NOVA SIMULAÇÃO DE ARQUITETURA ---
+        const addRequestBtn = document.getElementById('add-request-btn');
+        const ioSlider = document.getElementById('io-slider');
+        const ioValue = document.getElementById('io-value');
+        const resetSimBtn = document.getElementById('reset-sim-btn');
+        
+        let IO_DURATION = 3000;
+        ioSlider.addEventListener('input', (e) => {
+            IO_DURATION = parseInt(e.target.value);
+            ioValue.textContent = (IO_DURATION / 1000).toFixed(1) + 's';
+        });
+
+        class ArchitectureSimulator {
+            constructor(type, areaEl, metrics) {
+                this.type = type;
+                this.areaEl = areaEl;
+                this.metrics = metrics;
+                this.reset();
+            }
+
+            addRequest() {
+                this.reqIdCounter++;
+                const req = { id: this.reqIdCounter, color: this.colors[this.reqIdCounter % this.colors.length], startTime: Date.now() };
+                this.queue.push(req);
+                this.updateMetrics();
+            }
+
+            processQueue() {
+                if (this.type === 'blocking') {
+                    const availableThread = this.threads.find(t => !t.busy);
+                    if (availableThread && this.queue.length > 0) {
+                        const req = this.queue.shift();
+                        this.handleBlockingRequest(req, availableThread);
+                    }
+                } else {
+                    if (this.queue.length > 0) {
+                        const req = this.queue.shift();
+                        this.handleNonBlockingRequest(req);
+                    }
+                }
+                this.updateMetrics();
+            }
+            
+            handleBlockingRequest(req, thread) {
+                thread.busy = true;
+                thread.el.classList.add('busy');
+                thread.el.textContent = `R${req.id}`;
+                
+                const reqEl = this.createRequestElement(req);
+                setTimeout(() => reqEl.style.left = '35%', 100);
+
+                setTimeout(() => {
+                    reqEl.style.left = '75%';
+                    setTimeout(() => {
+                        reqEl.style.left = '110%';
+                        thread.busy = false;
+                        thread.el.classList.remove('busy');
+                        thread.el.textContent = `T${this.threads.indexOf(thread) + 1}`;
+                        this.finishRequest(req, reqEl);
+                    }, IO_DURATION);
+                }, 500);
+            }
+
+            handleNonBlockingRequest(req) {
+                this.inProgressCount++;
+                this.eventLoopEl.classList.add('busy');
+                setTimeout(() => this.eventLoopEl.classList.remove('busy'), 200);
+
+                const reqEl = this.createRequestElement(req);
+                setTimeout(() => reqEl.style.left = '35%', 100);
+                
+                setTimeout(() => {
+                    reqEl.style.left = '75%';
+                    setTimeout(() => {
+                        reqEl.style.left = '110%';
+                        this.inProgressCount--;
+                        this.finishRequest(req, reqEl);
+                    }, IO_DURATION);
+                }, 300);
+            }
+            
+            finishRequest(req, reqEl) {
+                this.completedCount++;
+                this.totalTime += Date.now() - req.startTime;
+                setTimeout(() => reqEl.remove(), 500);
+                this.updateMetrics();
+            }
+
+            createRequestElement(req) {
+                const el = document.createElement('div');
+                el.className = 'sim-request';
+                el.textContent = `R${req.id}`;
+                el.style.backgroundColor = req.color;
+                el.style.left = '5%';
+                this.areaEl.appendChild(el);
+                return el;
+            }
+
+            updateMetrics() {
+                this.metrics.completed.textContent = this.completedCount;
+                const avgTime = this.completedCount > 0 ? (this.totalTime / this.completedCount).toFixed(0) : 0;
+                this.metrics.avgTime.textContent = `${avgTime}ms`;
+
+                if (this.type === 'blocking') {
+                    this.metrics.queued.textContent = this.queue.length;
+                } else {
+                    this.metrics.inProgress.textContent = this.inProgressCount;
+                }
+            }
+
+            reset() {
+                this.reqIdCounter = 0;
+                this.queue = [];
+                this.completedCount = 0;
+                this.totalTime = 0;
+                this.colors = ['#0ea5e9', '#10b981', '#8b5cf6', '#ef4444', '#f97316']; // sky-500, green-500, ...
+                this.areaEl.querySelectorAll('.sim-request').forEach(el => el.remove());
+                if(this.type === 'blocking') {
+                    this.threads = Array.from(this.areaEl.querySelectorAll('.sim-thread')).map(el => ({ el, busy: false }));
+                    this.threads.forEach((thread, i) => {
+                        thread.busy = false;
+                        thread.el.classList.remove('busy');
+                        thread.el.textContent = `T${i+1}`;
+                    });
+                } else {
+                    this.eventLoopEl = this.areaEl.querySelector('.sim-event-loop');
+                    this.inProgressCount = 0;
+                }
+                this.updateMetrics();
+            }
+        }
+        
+        const blockingSim = new ArchitectureSimulator('blocking', document.getElementById('blocking-sim-area'), { completed: document.getElementById('blocking-completed'), queued: document.getElementById('blocking-queued'), avgTime: document.getElementById('blocking-avg-time'), });
+        const nonBlockingSim = new ArchitectureSimulator('non-blocking', document.getElementById('non-blocking-sim-area'), { completed: document.getElementById('non-blocking-completed'), inProgress: document.getElementById('non-blocking-progress'), avgTime: document.getElementById('non-blocking-avg-time'), });
+        
+        addRequestBtn.addEventListener('click', () => { blockingSim.addRequest(); nonBlockingSim.addRequest(); });
+        resetSimBtn.addEventListener('click', () => { blockingSim.reset(); nonBlockingSim.reset(); });
+        setInterval(() => { blockingSim.processQueue(); nonBlockingSim.processQueue(); }, 200);
+    </script>
+</body>
+</html>
+

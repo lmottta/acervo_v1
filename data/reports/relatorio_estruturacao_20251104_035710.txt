@@ -1,0 +1,145 @@
+================================================================================
+RELATÓRIO DE ESTRUTURAÇÃO DE DADOS - TB_ARQUIVO_ACERVO
+================================================================================
+Data/Hora: 2025-11-04 03:57:11
+Arquivo de Origem: tb_arquivo_acervo_20251104_033119.csv
+
+================================================================================
+RESUMO GERAL
+================================================================================
+Total de Registros: 69,640
+Total de Colunas: 18
+
+================================================================================
+QUALIDADE DOS DADOS
+================================================================================
+Registros Completos: 69,640 (100.00%)
+Com Descritores: 69,604
+Publicados na Internet: 12,490
+
+================================================================================
+DISTRIBUIÇÃO POR CATEGORIA
+================================================================================
+Categoria 1: 63,065 (90.56%)
+Categoria 2: 6,575 (9.44%)
+
+================================================================================
+DISTRIBUIÇÃO POR SITUAÇÃO
+================================================================================
+Situação 1: 69,514 (99.82%)
+Situação 2: 126 (0.18%)
+
+================================================================================
+DETALHAMENTO POR COLUNA
+================================================================================
+
+Coluna: id_arquivo_acervo
+  Tipo: Int64
+  Não Nulos: 69,640 (100.00%)
+  Nulos: 0 (0.00%)
+  Min: 1.0, Max: 70862.0, Média: 35241.25
+
+Coluna: co_protocolo_acervo
+  Tipo: Int64
+  Não Nulos: 69,640 (100.00%)
+  Nulos: 0 (0.00%)
+  Min: 2019110002851.0, Max: 2025200303351.0, Média: 2020889353944.15
+
+Coluna: id_categoria
+  Tipo: Int64
+  Não Nulos: 69,640 (100.00%)
+  Nulos: 0 (0.00%)
+  Min: 1.0, Max: 2.0, Média: 1.09
+
+Coluna: id_descritor_informacional
+  Tipo: Int64
+  Não Nulos: 63,065 (90.56%)
+  Nulos: 6,575 (9.44%)
+  Min: 1.0, Max: 63919.0, Média: 31652.08
+
+Coluna: id_descritor_catalografico
+  Tipo: Int64
+  Não Nulos: 62,776 (90.14%)
+  Nulos: 6,864 (9.86%)
+  Min: 2.0, Max: 63474.0, Média: 31519.24
+
+Coluna: id_descritor_tecnico
+  Tipo: Int64
+  Não Nulos: 68,984 (99.06%)
+  Nulos: 656 (0.94%)
+  Min: 1.0, Max: 69393.0, Média: 34588.11
+
+Coluna: id_descritoes_informacionais_iconografico
+  Tipo: Int64
+  Não Nulos: 6,575 (9.44%)
+  Nulos: 63,065 (90.56%)
+  Min: 1.0, Max: 6945.0, Média: 3512.89
+
+Coluna: ic_publicado_internet
+  Tipo: Int64
+  Não Nulos: 54,891 (78.82%)
+  Nulos: 14,749 (21.18%)
+  Min: 0.0, Max: 1.0, Média: 0.23
+
+Coluna: id_descritor_catalografico_iconografico
+  Tipo: Int64
+  Não Nulos: 6,545 (9.40%)
+  Nulos: 63,095 (90.60%)
+  Min: 1.0, Max: 6626.0, Média: 3317.16
+
+Coluna: id_arquivo_acervo_pai
+  Tipo: Int64
+  Não Nulos: 3,912 (5.62%)
+  Nulos: 65,728 (94.38%)
+  Min: 3225.0, Max: 70748.0, Média: 48388.84
+
+Coluna: ic_principal
+  Tipo: bool
+  Não Nulos: 69,640 (100.00%)
+  Nulos: 0 (0.00%)
+  True: 65,728, False: 3,912
+
+Coluna: id_situacao
+  Tipo: Int64
+  Não Nulos: 69,640 (100.00%)
+  Nulos: 0 (0.00%)
+  Min: 1.0, Max: 2.0, Média: 1.00
+
+Coluna: dt_emissao_etiqueta
+  Tipo: datetime64[ns]
+  Não Nulos: 451 (0.65%)
+  Nulos: 69,189 (99.35%)
+
+Coluna: ic_registro_completo
+  Tipo: bool
+  Não Nulos: 69,640 (100.00%)
+  Nulos: 0 (0.00%)
+  True: 69,640, False: 0
+
+Coluna: ic_tem_descritores
+  Tipo: bool
+  Não Nulos: 69,640 (100.00%)
+  Nulos: 0 (0.00%)
+  True: 69,604, False: 36
+
+Coluna: ic_tem_iconografico
+  Tipo: bool
+  Não Nulos: 69,640 (100.00%)
+  Nulos: 0 (0.00%)
+  True: 6,575, False: 63,065
+
+Coluna: ic_tem_arquivo_pai
+  Tipo: bool
+  Não Nulos: 69,640 (100.00%)
+  Nulos: 0 (0.00%)
+  True: 3,912, False: 65,728
+
+Coluna: nu_ano_emissao_etiqueta
+  Tipo: Int64
+  Não Nulos: 451 (0.65%)
+  Nulos: 69,189 (99.35%)
+  Min: 2021.0, Max: 2025.0, Média: 2023.99
+
+================================================================================
+Arquivo Processado: tb_arquivo_acervo_estruturado_20251104_035710.csv
+================================================================================
