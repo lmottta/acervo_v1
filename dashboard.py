@@ -10,6 +10,9 @@ from urllib.parse import urlparse, parse_qs
 from fpdf import FPDF
 import io
 
+import glob
+import shutil
+
 # Configuração da Página
 st.set_page_config(
     page_title="Dashboard ETL Acervo SPU",
@@ -21,13 +24,71 @@ st.set_page_config(
 # Constantes e Caminhos
 HISTORY_FILE = "history.json"
 LOGS_DIR = "logs"
-DATA_FILE = r"data/processed/tb_arquivo_acervo_estruturado.csv"
+PROCESSED_DIR = r"data/processed"
+OLD_DIR = os.path.join(PROCESSED_DIR, "old")
+DATA_FILE = os.path.join(PROCESSED_DIR, "tb_arquivo_acervo_estruturado.csv")
 
 # Garantir diretórios
 os.makedirs(LOGS_DIR, exist_ok=True)
-os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+os.makedirs(PROCESSED_DIR, exist_ok=True)
+os.makedirs(OLD_DIR, exist_ok=True)
 
 # --- Funções Auxiliares ---
+
+def get_latest_data_file():
+    """Retorna o caminho do arquivo mais recente na pasta processed."""
+    try:
+        # Padrão de busca para arquivos CSV na pasta processed
+        search_pattern = os.path.join(PROCESSED_DIR, "*.csv")
+        files = glob.glob(search_pattern)
+        
+        # Filtra arquivos que estão na pasta old (caso o glob pegue recursivamente, o que não deve acontecer por padrão, mas garante)
+        files = [f for f in files if "old" not in os.path.dirname(f)]
+        
+        if not files:
+            return None
+            
+        # Retorna o arquivo mais recente
+        latest_file = max(files, key=os.path.getmtime)
+        return latest_file
+    except Exception as e:
+        st.error(f"Erro ao buscar arquivo mais recente: {e}")
+        return None
+
+def archive_old_files():
+    """Move arquivos processados antigos para a pasta 'old', mantendo apenas o mais recente na pasta processed."""
+    try:
+        # Busca todos os CSVs na pasta processed
+        search_pattern = os.path.join(PROCESSED_DIR, "*.csv")
+        files = glob.glob(search_pattern)
+        # Garante que não pega arquivos dentro de subdiretórios (como old)
+        files = [f for f in files if os.path.dirname(f) == os.path.abspath(PROCESSED_DIR) or os.path.dirname(f) == PROCESSED_DIR]
+        
+        if not files or len(files) <= 1:
+            return
+            
+        # Ordena por data de modificação (mais recente primeiro)
+        files.sort(key=os.path.getmtime, reverse=True)
+        
+        # Mantém o primeiro (files[0]) e move o restante (files[1:])
+        files_to_move = files[1:]
+        
+        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        for file_path in files_to_move:
+            filename = os.path.basename(file_path)
+            # Adiciona timestamp se não tiver
+            if "_" not in filename or not any(char.isdigit() for char in filename):
+                name, ext = os.path.splitext(filename)
+                new_name = f"{name}_archived_{current_time}{ext}"
+            else:
+                new_name = filename
+                
+            dest_path = os.path.join(OLD_DIR, new_name)
+            shutil.move(file_path, dest_path)
+            
+    except Exception as e:
+        st.error(f"Erro ao arquivar arquivos antigos: {e}")
 
 def load_history():
     """Carrega o histórico de execuções."""
@@ -99,7 +160,22 @@ with tabs[0]:
     col_exec_1, col_exec_2 = st.columns([1, 3])
     
     with col_exec_1:
-        st.info("Clique abaixo para iniciar o processo de extração e transformação.")
+        st.info("Configuração da Execução")
+        
+        # Seleção do Script
+        script_option = st.radio(
+            "Selecione o Script ETL:",
+            ["etl_acervo_new.py (Novo)", "etl_acervo.py (Antigo)"],
+            index=0,
+            help="Escolha qual versão do script de extração deseja executar."
+        )
+        
+        selected_script = "etl_acervo_new.py" if "Novo" in script_option else "etl_acervo.py"
+        
+        st.divider()
+        
+        st.markdown(f"**Script Selecionado:** `{selected_script}`")
+        
         btn_run = st.button("Iniciar Execução ETL", type="primary", use_container_width=True)
     
     with col_exec_2:
@@ -116,10 +192,10 @@ with tabs[0]:
         
         start_time = datetime.now()
         
-        status_container.info("⏳ Inicializando processo...")
+        status_container.info(f"⏳ Inicializando processo com {selected_script}...")
         
         # Execução
-        cmd = ["python", "etl_acervo_new.py"]
+        cmd = ["python", selected_script]
         
         # Variáveis de ambiente para forçar saída sem buffer
         env = os.environ.copy()
@@ -177,13 +253,20 @@ with tabs[0]:
                     "date": start_time.isoformat(),
                     "duration_seconds": duration,
                     "status": status,
-                    "log_file": log_filename
+                    "log_file": log_filename,
+                    "script": selected_script
                 }
                 save_history_entry(entry)
                 
                 if return_code == 0:
                     status_container.success(f"✅ Execução concluída com sucesso em {duration:.2f}s!")
                     st.toast("ETL finalizado com sucesso!", icon="✅")
+                    
+                    # Arquiva arquivos antigos mantendo apenas o mais recente
+                    with st.spinner("Arquivando versões antigas..."):
+                        archive_old_files()
+                        st.info("🗄️ Arquivos antigos movidos para pasta 'old'.")
+                        
                 else:
                     status_container.error("❌ Erro durante a execução. Verifique os logs.")
                     st.toast("Erro na execução do ETL.", icon="❌")
@@ -195,7 +278,13 @@ with tabs[0]:
 with tabs[1]:
     st.header("Visualização e Exportação")
     
-    if os.path.exists(DATA_FILE):
+    # Busca dinâmica do arquivo mais recente
+    latest_file_viz = get_latest_data_file()
+    target_file_viz = latest_file_viz if latest_file_viz else DATA_FILE
+    
+    if target_file_viz and os.path.exists(target_file_viz):
+        st.caption(f"📂 Fonte de Dados: `{os.path.basename(target_file_viz)}`")
+        
         if st.checkbox("Carregar Dados para Visualização", value=False):
             # Carregamento Otimizado (Cache)
             @st.cache_data(ttl=60) # Cache por 1 min para permitir reload
@@ -203,13 +292,13 @@ with tabs[1]:
                 return pd.read_csv(path, sep=";", encoding="utf-8-sig", dtype=str) # Ler tudo como string p/ segurança visual
             
             try:
-                df = load_data(DATA_FILE)
+                df = load_data(target_file_viz)
                 
                 # Métricas
                 m1, m2, m3 = st.columns(3)
                 m1.metric("Total de Linhas", f"{len(df):,}")
                 m2.metric("Total de Colunas", len(df.columns))
-                file_stats = os.stat(DATA_FILE)
+                file_stats = os.stat(target_file_viz)
                 m3.metric("Tamanho do Arquivo", f"{file_stats.st_size / (1024*1024):.2f} MB")
                 
                 st.divider()
@@ -309,11 +398,21 @@ with tabs[1]:
 with tabs[2]:
     st.header("🛠️ Teste de API (Estilo Postman)")
 
+    # Determina o arquivo mais recente dinamicamente (recalculando caso a aba tenha sido acessada diretamente)
+    # Isso é necessário porque 'latest_file' foi definido dentro do escopo da TAB 2 anteriormente,
+    # mas o Streamlit roda o script inteiro a cada interação.
+    # Garantimos que ele esteja disponível aqui.
+    if 'latest_file' not in locals():
+        latest_file = get_latest_data_file()
+
     # --- Busca Local de Arquivos ---
     st.subheader("🔍 Consultar Arquivo na Base Local")
     st.caption("Busque pelo ID ou Nome do Arquivo na base extraída para preencher automaticamente os parâmetros da API.")
     
-    if os.path.exists(DATA_FILE):
+    # Usa o arquivo mais recente identificado anteriormente
+    target_file = latest_file if latest_file else DATA_FILE
+    
+    if target_file and os.path.exists(target_file):
         col_search_1, col_search_2 = st.columns([3, 1])
         with col_search_1:
             search_term = st.text_input("Digite o ID (id_arquivo_acervo) ou Nome do Arquivo:", key="search_term_api")
@@ -335,7 +434,7 @@ with tabs[2]:
                     return pd.read_csv(path, sep=";", dtype=str)
             
             try:
-                df_lookup = load_lookup_data(DATA_FILE)
+                df_lookup = load_lookup_data(target_file)
                 
                 # Verifica se colunas existem
                 if "id_arquivo_acervo" in df_lookup.columns and "nome_arquivo_gravado" in df_lookup.columns:

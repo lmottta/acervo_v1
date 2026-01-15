@@ -380,9 +380,8 @@ SELECT
     
     -- special_attachments - URLs dos anexos agregados - IMPALA: GROUP_CONCAT DISTINCT
     COALESCE(
-        GROUP_CONCAT(DISTINCT CAST(tx.id_arquivo_anexo AS STRING), '||'),
+        GROUP_CONCAT(DISTINCT CONCAT('https://spuservices.spu.gestao.gov.br/acervo/arquivo/arquivos-acervo/', CAST(tx.ds_arquivo_gravado AS STRING)), '||'),
         ''
-		
     ) AS special_attachments,
     COALESCE(
         GROUP_CONCAT(DISTINCT CAST(tx.ds_arquivo_gravado AS STRING), '||'),

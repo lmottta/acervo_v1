@@ -5,5 +5,21 @@
         "duration_seconds": 31.21909,
         "status": "Success",
         "log_file": "etl_20260113_150947.log"
+    },
+    {
+        "id": "20260115_130152",
+        "date": "2026-01-15T13:01:52.972545",
+        "duration_seconds": 42.25533,
+        "status": "Success",
+        "log_file": "etl_20260115_130152.log",
+        "script": "etl_acervo_new.py"
+    },
+    {
+        "id": "20260115_131105",
+        "date": "2026-01-15T13:11:05.020220",
+        "duration_seconds": 35.77135,
+        "status": "Success",
+        "log_file": "etl_20260115_131105.log",
+        "script": "etl_acervo_new.py"
     }
 ]
