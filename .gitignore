@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# Dados e Logs
+logs/
+data/
+history.json
+
+# Ambiente
+.env
+venv/
+.streamlit/secrets.toml
