@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import subprocess
 import os
+import sys
 import json
 import time
 from datetime import datetime, date
@@ -203,7 +204,7 @@ with tabs[0]:
         status_container.info(f"⏳ Inicializando processo com {selected_script}...")
         
         # Execução
-        cmd = ["python", selected_script]
+        cmd = [sys.executable, selected_script]
         
         # Variáveis de ambiente para forçar saída sem buffer
         env = os.environ.copy()
