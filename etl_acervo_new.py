@@ -622,6 +622,7 @@ def _get_impala_params():
         "password": IMPALA_PASSWORD,
         "auth_mechanism": IMPALA_AUTH_MECHANISM,
         "use_ssl": IMPALA_USE_SSL,
+        "timeout": IMPALA_TIMEOUT,
     }
 
 
