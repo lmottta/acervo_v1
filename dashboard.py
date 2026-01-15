@@ -12,6 +12,8 @@ import io
 
 import glob
 import shutil
+import zipfile
+import re
 
 # Configuração da Página
 st.set_page_config(
@@ -330,61 +332,33 @@ with tabs[1]:
                 # Seção de Exportação e Download
                 st.subheader("📤 Exportação e Download")
                 
-                exp_col1, exp_col2 = st.columns(2)
+                st.markdown("### 💾 Downloads")
                 
-                with exp_col1:
-                    st.markdown("### 💾 Downloads")
-                    
-                    # CSV
-                    csv_data = df.to_csv(sep=";", index=False).encode('utf-8-sig')
+                d_col1, d_col2, d_col3, d_col4 = st.columns(4)
+                
+                # CSV
+                csv_data = df.to_csv(sep=";", index=False).encode('utf-8-sig')
+                with d_col1:
                     st.download_button("Download CSV", data=csv_data, file_name="acervo.csv", mime="text/csv", use_container_width=True)
-                    
-                    # Excel (XLSX)
+                
+                # Excel (XLSX)
+                with d_col2:
                     try:
                         # Necessário instalar xlsxwriter ou openpyxl se não tiver no ambiente, mas openpyxl já temos
                         st.download_button("Download XLSX", data=to_excel(df), file_name="acervo.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
                     except Exception as e:
                         st.warning(f"Excel indisponível: {e}")
 
-                    # PDF
+                # PDF
+                with d_col3:
                     try:
                         st.download_button("Download PDF (Resumo)", data=to_pdf(df), file_name="acervo_resumo.pdf", mime="application/pdf", use_container_width=True)
                     except Exception as e:
                         st.warning(f"PDF indisponível: {e}")
 
-                    # TXT
+                # TXT
+                with d_col4:
                     st.download_button("Download TXT", data=csv_data, file_name="acervo.txt", mime="text/plain", use_container_width=True)
-
-                with exp_col2:
-                    st.markdown("### 🌐 Envio via API (POST)")
-                    post_url = st.text_input("URL de Destino (Endpoint)", value="https://httpbin.org/post")
-                    
-                    c_test, c_send = st.columns(2)
-                    
-                    if c_test.button("Testar Conexão", use_container_width=True):
-                        try:
-                            # Teste simples (OPTIONS ou HEAD ou GET)
-                            r = requests.get(post_url, timeout=5)
-                            if r.status_code < 400:
-                                st.success(f"Conexão OK! Status: {r.status_code}")
-                            else:
-                                st.warning(f"Conexão respondeu com Status: {r.status_code}")
-                        except Exception as e:
-                            st.error(f"Erro ao conectar: {e}")
-                    
-                    if c_send.button("Enviar Dados (POST)", type="primary", use_container_width=True):
-                        try:
-                            # Envia uma amostra JSON para não travar
-                            payload = df.head(100).to_dict(orient="records")
-                            with st.spinner("Enviando amostra (100 registros)..."):
-                                r = requests.post(post_url, json=payload, timeout=10)
-                                if r.status_code in [200, 201]:
-                                    st.success(f"Enviado com sucesso! ID: {r.status_code}")
-                                    st.json(r.json())
-                                else:
-                                    st.error(f"Falha no envio: {r.status_code} - {r.text}")
-                        except Exception as e:
-                            st.error(f"Erro no envio: {e}")
 
             except Exception as e:
                 st.error(f"Erro ao ler arquivo de dados: {e}")
@@ -485,6 +459,150 @@ with tabs[2]:
 
     st.divider()
 
+    # --- Batch Download Section ---
+    st.subheader("📦 Download em Lote (.zip)")
+    
+    # Uses 'target_file' defined earlier in this tab
+    if target_file and os.path.exists(target_file):
+        with st.expander("Selecione arquivos para download em massa", expanded=False):
+            try:
+                # Carrega lista de arquivos e IDs
+                @st.cache_data(ttl=60)
+                def load_file_list(path):
+                     # Tenta carregar ID e Nome
+                     try:
+                        df_b = pd.read_csv(path, sep=";", usecols=["id_arquivo_acervo", "nome_arquivo_gravado"], dtype=str)
+                     except:
+                        # Fallback apenas nome
+                        df_b = pd.read_csv(path, sep=";", usecols=["nome_arquivo_gravado"], dtype=str)
+                        df_b["id_arquivo_acervo"] = "N/A"
+                     return df_b
+                
+                df_files = load_file_list(target_file)
+                
+                # Filtro de Busca
+                filter_text = st.text_input("Filtrar arquivos por Nome ou ID:", placeholder="Digite parte do nome ou ID para filtrar a lista...").strip().lower()
+                
+                # Processamento da Lista
+                all_options = []
+                
+                # Itera sobre o DF para montar as opções
+                # Limitamos a iteração para performance se não houver filtro, mas com filtro varremos tudo
+                
+                if filter_text:
+                     # Normalização para busca
+                     ids_norm = df_files["id_arquivo_acervo"].fillna("").astype(str).str.lower().str.strip()
+                     names_norm = df_files["nome_arquivo_gravado"].fillna("").astype(str).str.lower().str.strip()
+                     
+                     # 1. Busca Exata (Prioridade)
+                     # ID Exato
+                     mask_exact_id = ids_norm == filter_text
+                     
+                     # Nome Exato (Arquivo específico dentro do lote)
+                     # Regex para encontrar o nome exato dentro da string separada por ||
+                     # Padrão: Começo da string OU ||, seguido do texto, seguido de Fim da string OU ||
+                     safe_filter = re.escape(filter_text)
+                     pattern_exact_name = f"(?:^|\|\|){safe_filter}(?:$|\|\|)"
+                     mask_exact_name = names_norm.str.contains(pattern_exact_name, regex=True, na=False)
+                     
+                     mask_exact = mask_exact_id | mask_exact_name
+                     
+                     if mask_exact.any():
+                         df_filtered = df_files[mask_exact]
+                         st.toast(f"Filtro exato aplicado! Encontrados {len(df_filtered)} lotes.", icon="🎯")
+                     else:
+                         # 2. Busca Parcial (Fallback)
+                         mask_contains = (
+                             names_norm.str.contains(filter_text, regex=False) | 
+                             ids_norm.str.contains(filter_text, regex=False)
+                         )
+                         df_filtered = df_files[mask_contains]
+                         
+                         if len(df_filtered) > 2000:
+                             st.warning(f"O filtro retornou {len(df_filtered)} resultados. Mostrando os primeiros 2000. Refine sua busca.")
+                             df_filtered = df_filtered.head(2000)
+                else:
+                    df_filtered = df_files.head(2000) # Sem filtro, mostra top 2000
+                
+                # Expande nomes compostos (||) e cria lista de tuplas (display, value) se quiséssemos, 
+                # mas o multiselect trabalha com strings. Vamos usar apenas o nome do arquivo no multiselect
+                # pois é o que o download precisa.
+                
+                final_options = []
+                seen = set()
+                
+                for idx, row in df_filtered.iterrows():
+                    f_raw = str(row["nome_arquivo_gravado"])
+                    f_id = str(row.get("id_arquivo_acervo", "N/A"))
+                    
+                    parts = f_raw.split("||")
+                    for p in parts:
+                        p = p.strip()
+                        if p and p.lower() != 'nan' and p not in seen:
+                            final_options.append(p)
+                            seen.add(p)
+
+                # Ordena
+                final_options.sort()
+
+                # Selection Widget
+                st.caption(f"Arquivos disponíveis (filtrados): {len(final_options)}")
+                
+                # Auto-seleção: Se houver filtro ativo, seleciona todos por padrão.
+                # Key dinâmica garante reset quando o filtro muda.
+                default_files = final_options if filter_text else []
+                select_key = f"files_multiselect_{filter_text}" if filter_text else "files_multiselect_default"
+                
+                selected_files = st.multiselect(
+                    "Selecione os arquivos:", 
+                    options=final_options, 
+                    default=default_files,
+                    key=select_key,
+                    help="Com o filtro ativo, todos os arquivos encontrados são selecionados automaticamente."
+                )
+                
+                if st.button("📥 Gerar ZIP", type="primary"):
+                    if selected_files:
+                        zip_buffer = io.BytesIO()
+                        bucket_batch = st.session_state.get('dyn_bucket', 'arquivos-acervo')
+                        base_url_batch = "https://spuservices.spu.gestao.gov.br/acervo/arquivo"
+                        
+                        progress_bar = st.progress(0, text="Iniciando...")
+                        success_count = 0
+                        
+                        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+                            for i, fname in enumerate(selected_files):
+                                url_dl = f"{base_url_batch}/{bucket_batch}/{fname}"
+                                try:
+                                    # Request
+                                    r_batch = requests.get(url_dl, timeout=30)
+                                    if r_batch.status_code == 200:
+                                        zf.writestr(fname, r_batch.content)
+                                        success_count += 1
+                                except Exception as e:
+                                    st.error(f"Erro em {fname}: {e}")
+                                
+                                # Update progress
+                                pct = int(((i + 1) / len(selected_files)) * 100)
+                                progress_bar.progress(pct, text=f"Baixando {i+1}/{len(selected_files)}")
+                        
+                        progress_bar.empty()
+                        
+                        if success_count > 0:
+                            st.success(f"ZIP criado com {success_count} arquivos!")
+                            st.download_button(
+                                label="💾 Baixar Arquivo ZIP",
+                                data=zip_buffer.getvalue(),
+                                file_name="arquivos_selecionados.zip",
+                                mime="application/zip"
+                            )
+                        else:
+                            st.warning("Nenhum arquivo foi baixado com sucesso.")
+                    else:
+                        st.warning("Selecione pelo menos um arquivo.")
+            except Exception as e:
+                st.error(f"Erro ao carregar arquivos: {e}")
+
     st.markdown("Execute requisições HTTP diretamente daqui. Importe comandos cURL para preenchimento rápido.")
 
     # --- Importador de cURL ---
@@ -574,10 +692,17 @@ with tabs[2]:
             st.session_state['api_url'] = new_url
 
     col_dyn_1, col_dyn_2 = st.columns(2)
+    
+    # Inicializa valores no session_state para evitar warning de widget
+    if 'dyn_bucket' not in st.session_state:
+        st.session_state['dyn_bucket'] = "arquivos-acervo"
+    if 'dyn_file' not in st.session_state:
+        st.session_state['dyn_file'] = "1550846346565-null-8.tif-paraPDF.pdf"
+
     with col_dyn_1:
-        st.text_input("Bucket", value="arquivos-acervo", key="dyn_bucket", on_change=update_api_url)
+        st.text_input("Bucket", key="dyn_bucket", on_change=update_api_url)
     with col_dyn_2:
-        st.text_input("Nome do Arquivo / ID", value="1550846346565-null-8.tif-paraPDF.pdf", key="dyn_file", on_change=update_api_url)
+        st.text_input("Nome do Arquivo / ID", key="dyn_file", on_change=update_api_url)
 
     st.divider()
 
@@ -723,7 +848,8 @@ with tabs[2]:
                             st.download_button("Download PDF", data=response.content, file_name="documento.pdf", mime="application/pdf")
                             
                         elif "octet-stream" in content_type:
-                            st.info("⚠️ Conteúdo binário genérico detectado. Faça o download abaixo.")
+                            st.info("⚠️ Conteúdo binário genérico detectado.")
+                            # Visualização removida por performance (solicitação do usuário)
                             st.download_button("Download Response", data=response.content, file_name="response.bin")
                         else:
                             st.code(response.text)
