@@ -23,6 +23,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Inicialização de Estado Global
+if 'api_headers' not in st.session_state:
+    st.session_state['api_headers'] = '{\n  "X-API-Key": "98a7b6c5-d4e3-f2a1-b098-7c6d5e4f3a2b"\n}'
+if 'api_body' not in st.session_state:
+    st.session_state['api_body'] = ''
+
 # Constantes e Caminhos
 HISTORY_FILE = "history.json"
 LOGS_DIR = "logs"
@@ -748,8 +754,8 @@ with tabs[2]:
     req_tabs = st.tabs(["Headers", "Body", "Params (Query)"])
     
     with req_tabs[0]:
-        default_headers = st.session_state.get('api_headers', '{\n  "X-API-Key": "98a7b6c5-d4e3-f2a1-b098-7c6d5e4f3a2b"\n}')
-        headers_str = st.text_area("Headers (JSON)", value=default_headers, height=150)
+        # Bind direto com session_state['api_headers'] (inicializado no topo)
+        headers_str = st.text_area("Headers (JSON)", key="api_headers", height=150)
         try:
             headers = json.loads(headers_str)
         except:
@@ -757,8 +763,8 @@ with tabs[2]:
             headers = {}
 
     with req_tabs[1]:
-        default_body = st.session_state.get('api_body', '')
-        body_str = st.text_area("Body (Raw/JSON)", value=default_body, height=150)
+        # Bind direto com session_state['api_body']
+        body_str = st.text_area("Body (Raw/JSON)", key="api_body", height=150)
 
     with req_tabs[2]:
         st.markdown("Adicione parâmetros de consulta (Query Params) aqui:")
