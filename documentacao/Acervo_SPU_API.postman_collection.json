@@ -1,0 +1,130 @@
+{
+	"info": {
+		"_postman_id": "c7a8b9d0-1e2f-4a3b-8c9d-0e1f2a3b4c5d",
+		"name": "Acervo SPU API",
+		"description": "Coleção de requisições para interação com a API do Acervo da SPU (Secretaria do Patrimônio da União).\n\nInclui exemplos para:\n- Download de arquivo por Nome (SPU Services)\n- Download de arquivo por ID (SPU Net / Portal)\n- Pesquisa de arquivos (Exemplo POST)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Download por Nome (SPU Services)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-API-Key",
+						"value": "{{api_key}}",
+						"type": "text",
+						"description": "Chave de Autenticação"
+					}
+				],
+				"url": {
+					"raw": "{{base_url_spuservices}}/acervo/arquivo/{{bucket}}/{{file_name}}",
+					"host": [
+						"{{base_url_spuservices}}"
+					],
+					"path": [
+						"acervo",
+						"arquivo",
+						"{{bucket}}",
+						"{{file_name}}"
+					]
+				},
+				"description": "Realiza o download de um arquivo específico utilizando seu nome completo e o bucket de origem.\n\nBaseado na documentação: `download-arquivos-acervo-cgdai.ipynb`."
+			},
+			"response": []
+		},
+		{
+			"name": "Download por ID (Portal Público)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url_spunet}}/acervo/api/public/portal/arquivo-anexo/{{file_id}}",
+					"host": [
+						"{{base_url_spunet}}"
+					],
+					"path": [
+						"acervo",
+						"api",
+						"public",
+						"portal",
+						"arquivo-anexo",
+						"{{file_id}}"
+					]
+				},
+				"description": "Realiza o download (ou visualização) de um arquivo anexo utilizando seu ID numérico.\n\nEndpoint público utilizado pelo Portal de Serviços."
+			},
+			"response": []
+		},
+		{
+			"name": "Pesquisar Arquivos (Exemplo POST)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-API-Key",
+						"value": "{{api_key}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"termo\": \"planta\",\n    \"data_inicio\": \"2023-01-01\",\n    \"data_fim\": \"2023-12-31\",\n    \"tipo_documento\": \"cartografia\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url_spunet}}/acervo/api/public/portal/pesquisa",
+					"host": [
+						"{{base_url_spunet}}"
+					],
+					"path": [
+						"acervo",
+						"api",
+						"public",
+						"portal",
+						"pesquisa"
+					]
+				},
+				"description": "Exemplo de requisição POST para pesquisa de arquivos (Simulação/Template).\n\nPermite enviar critérios de filtro no corpo da requisição."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url_spuservices",
+			"value": "https://spuservices.spu.gestao.gov.br",
+			"type": "string"
+		},
+		{
+			"key": "base_url_spunet",
+			"value": "https://spunet.economia.gov.br",
+			"type": "string"
+		},
+		{
+			"key": "api_key",
+			"value": "98a7b6c5-d4e3-f2a1-b098-7c6d5e4f3a2b",
+			"type": "string"
+		},
+		{
+			"key": "bucket",
+			"value": "arquivos-acervo",
+			"type": "string"
+		},
+		{
+			"key": "file_name",
+			"value": "1550846346565-null-8.tif-paraPDF.pdf",
+			"type": "string"
+		},
+		{
+			"key": "file_id",
+			"value": "1550846346565",
+			"type": "string"
+		}
+	]
+}

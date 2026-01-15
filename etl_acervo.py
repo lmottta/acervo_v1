@@ -63,7 +63,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
 # Nome fixo para Nextcloud (será sobrescrito mantendo mesmo share)
-OUTPUT_FILENAME = "tb_arquivo_acervo_estruturado.xlsx"
+OUTPUT_FILENAME = "tb_arquivo_acervo_estruturado.csv"
 
 # Limite de linhas (opcional)
 MAX_ROWS = None  # None = sem limite
@@ -1017,13 +1017,13 @@ def executar_pipeline_etl():
         
         # 3. Salvar arquivo (Excel para Nextcloud, CSV também)
         output_file = PROCESSED_DIR / OUTPUT_FILENAME
-        save_file(df_structured, output_file, format="excel")
+        save_file(df_structured, output_file, format="csv")
         
         # 4. Publicar no Nextcloud
-        nextcloud_info = publish_to_nextcloud(output_file, OUTPUT_FILENAME)
+        # nextcloud_info = publish_to_nextcloud(output_file, OUTPUT_FILENAME)
         
         # 5. Enviar Email
-        send_email(output_file, len(df_structured), len(df_structured.columns), nextcloud_info)
+        # send_email(output_file, len(df_structured), len(df_structured.columns), nextcloud_info)
         
     except Exception as e:
         print(f"\n❌ Falha crítica no pipeline: {e}")

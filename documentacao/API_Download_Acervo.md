@@ -45,10 +45,54 @@ Recupera o binário de um arquivo específico armazenado no Object Storage do Ac
 
 ---
 
-## 4. Exemplo de Integração (cURL)
+## 4. Coleção Postman
+
+Para facilitar os testes e integração, disponibilizamos uma coleção do Postman contendo exemplos de requisições:
+
+- **Arquivo:** [`Acervo_SPU_API.postman_collection.json`](./Acervo_SPU_API.postman_collection.json)
+- **Funcionalidades Incluídas:**
+    1.  **Download por Nome (GET):** Utiliza o endpoint `spuservices` com autenticação via Header.
+    2.  **Download por ID (GET):** Utiliza o endpoint público `spunet` para acesso via identificador numérico.
+    3.  **Pesquisa (POST):** Template para envio de critérios de busca via JSON.
+
+### Como Importar
+1.  Abra o Postman.
+2.  Clique em **Import** (canto superior esquerdo).
+3.  Arraste o arquivo `.json` ou selecione-o na pasta `documentacao`.
+4.  As variáveis de ambiente (URLs, Chaves) já vêm pré-configuradas na coleção.
+
+---
+
+### 5. Exemplos de Uso com cURL
+
+#### 5.1. Download por Nome (Autenticado - Baseado no Notebook)
+Este é o método oficial identificado nos scripts de produção.
 
 ```bash
 curl -X GET "https://spuservices.spu.gestao.gov.br/acervo/arquivo/arquivos-acervo/1550846346565-null-8.tif-paraPDF.pdf" \
+  -H "X-API-Key: 98a7b6c5-d4e3-f2a1-b098-7c6d5e4f3a2b" \
+  --output "download_auth.pdf"
+```
+
+#### 5.2. Download por ID (Endpoint Público Legado)
+Utiliza o endpoint público que dispensa API Key (conforme cenário de uso).
+
+```bash
+curl -X GET "https://spunet.economia.gov.br/acervo/api/public/portal/arquivo-anexo/1550846346565" \
+     --output "download_id.pdf"
+```
+
+### 5.3. Pesquisa de Arquivos (POST)
+Exemplo de envio de critérios de filtro (payload JSON).
+
+```bash
+curl -X POST "https://spunet.economia.gov.br/acervo/api/public/portal/pesquisa" \
+     -H "Content-Type: application/json" \
      -H "X-API-Key: 98a7b6c5-d4e3-f2a1-b098-7c6d5e4f3a2b" \
-     --output "downloaded_file.pdf"
+     -d '{
+        "termo": "planta",
+        "data_inicio": "2023-01-01",
+        "data_fim": "2023-12-31",
+        "tipo_documento": "cartografia"
+     }'
 ```
