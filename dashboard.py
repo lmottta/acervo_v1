@@ -567,20 +567,30 @@ with tabs[2]:
                         bucket_batch = st.session_state.get('dyn_bucket', 'arquivos-acervo')
                         base_url_batch = "https://spuservices.spu.gestao.gov.br/acervo/arquivo"
                         
+                        # Recupera Headers da Aba de Teste de API
+                        headers_str = st.session_state.get('api_headers', '{}')
+                        try:
+                            headers_batch = json.loads(headers_str)
+                        except:
+                            headers_batch = {}
+                        
                         progress_bar = st.progress(0, text="Iniciando...")
                         success_count = 0
+                        errors = []
                         
                         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                             for i, fname in enumerate(selected_files):
                                 url_dl = f"{base_url_batch}/{bucket_batch}/{fname}"
                                 try:
-                                    # Request
-                                    r_batch = requests.get(url_dl, timeout=30)
+                                    # Request com Headers
+                                    r_batch = requests.get(url_dl, headers=headers_batch, timeout=30)
                                     if r_batch.status_code == 200:
                                         zf.writestr(fname, r_batch.content)
                                         success_count += 1
+                                    else:
+                                        errors.append(f"{fname}: Status {r_batch.status_code}")
                                 except Exception as e:
-                                    st.error(f"Erro em {fname}: {e}")
+                                    errors.append(f"{fname}: {str(e)}")
                                 
                                 # Update progress
                                 pct = int(((i + 1) / len(selected_files)) * 100)
@@ -590,6 +600,11 @@ with tabs[2]:
                         
                         if success_count > 0:
                             st.success(f"ZIP criado com {success_count} arquivos!")
+                            if errors:
+                                with st.expander(f"⚠️ {len(errors)} arquivos falharam"):
+                                    for err in errors:
+                                        st.write(err)
+                                        
                             st.download_button(
                                 label="💾 Baixar Arquivo ZIP",
                                 data=zip_buffer.getvalue(),
@@ -597,7 +612,11 @@ with tabs[2]:
                                 mime="application/zip"
                             )
                         else:
-                            st.warning("Nenhum arquivo foi baixado com sucesso.")
+                            st.error("Nenhum arquivo foi baixado com sucesso.")
+                            if errors:
+                                with st.expander("Detalhes dos Erros"):
+                                    for err in errors:
+                                        st.write(err)
                     else:
                         st.warning("Selecione pelo menos um arquivo.")
             except Exception as e:
