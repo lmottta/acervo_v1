@@ -535,11 +535,9 @@ with tabs[2]:
                 else:
                     df_filtered = df_files.head(2000) # Sem filtro, mostra top 2000
                 
-                # Expande nomes compostos (||) e cria lista de tuplas (display, value) se quiséssemos, 
-                # mas o multiselect trabalha com strings. Vamos usar apenas o nome do arquivo no multiselect
-                # pois é o que o download precisa.
+                # Expande nomes compostos (||) e cria mapa de opções para manter referência do ID
                 
-                final_options = []
+                option_map = {} # Chave: "[ID] NomeArquivo" -> Valor: NomeArquivoReal
                 seen = set()
                 
                 for idx, row in df_filtered.iterrows():
@@ -549,12 +547,15 @@ with tabs[2]:
                     parts = f_raw.split("||")
                     for p in parts:
                         p = p.strip()
-                        if p and p.lower() != 'nan' and p not in seen:
-                            final_options.append(p)
-                            seen.add(p)
+                        if p and p.lower() != 'nan':
+                            # Cria chave composta para exibir no multiselect
+                            display_key = f"[{f_id}] {p}"
+                            if display_key not in seen:
+                                option_map[display_key] = p
+                                seen.add(display_key)
 
-                # Ordena
-                final_options.sort()
+                # Ordena pelas chaves (que começam com ID, então agrupa por ID visualmente)
+                final_options = sorted(list(option_map.keys()))
 
                 # Selection Widget
                 st.caption(f"Arquivos disponíveis (filtrados): {len(final_options)}")
@@ -564,7 +565,7 @@ with tabs[2]:
                 default_files = final_options if filter_text else []
                 select_key = f"files_multiselect_{filter_text}" if filter_text else "files_multiselect_default"
                 
-                selected_files = st.multiselect(
+                selected_options = st.multiselect(
                     "Selecione os arquivos:", 
                     options=final_options, 
                     default=default_files,
@@ -573,7 +574,7 @@ with tabs[2]:
                 )
                 
                 if st.button("📥 Gerar ZIP", type="primary"):
-                    if selected_files:
+                    if selected_options:
                         zip_buffer = io.BytesIO()
                         bucket_batch = st.session_state.get('dyn_bucket', 'arquivos-acervo')
                         base_url_batch = "https://spuservices.spu.gestao.gov.br/acervo/arquivo"
@@ -590,7 +591,11 @@ with tabs[2]:
                         errors = []
                         
                         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-                            for i, fname in enumerate(selected_files):
+                            for i, opt_key in enumerate(selected_options):
+                                # Recupera nome real do arquivo a partir do mapa
+                                fname = option_map.get(opt_key)
+                                if not fname: continue
+                                
                                 url_dl = f"{base_url_batch}/{bucket_batch}/{fname}"
                                 try:
                                     # Request com Headers
@@ -604,8 +609,8 @@ with tabs[2]:
                                     errors.append(f"{fname}: {str(e)}")
                                 
                                 # Update progress
-                                pct = int(((i + 1) / len(selected_files)) * 100)
-                                progress_bar.progress(pct, text=f"Baixando {i+1}/{len(selected_files)}")
+                                pct = int(((i + 1) / len(selected_options)) * 100)
+                                progress_bar.progress(pct, text=f"Baixando {i+1}/{len(selected_options)}")
                         
                         progress_bar.empty()
                         
