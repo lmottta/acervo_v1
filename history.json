@@ -21,5 +21,13 @@
         "status": "Success",
         "log_file": "etl_20260115_131105.log",
         "script": "etl_acervo_new.py"
+    },
+    {
+        "id": "20260115_155030",
+        "date": "2026-01-15T15:50:30.449173",
+        "duration_seconds": 31.856324,
+        "status": "Success",
+        "log_file": "etl_20260115_155030.log",
+        "script": "etl_acervo_new.py"
     }
 ]
