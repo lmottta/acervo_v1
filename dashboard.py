@@ -23,8 +23,9 @@ HISTORY_FILE = "history.json"
 LOGS_DIR = "logs"
 DATA_FILE = r"data/processed/tb_arquivo_acervo_estruturado.csv"
 
-if not os.path.exists(LOGS_DIR):
-    os.makedirs(LOGS_DIR)
+# Garantir diretórios
+os.makedirs(LOGS_DIR, exist_ok=True)
+os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
 
 # --- Funções Auxiliares ---
 
