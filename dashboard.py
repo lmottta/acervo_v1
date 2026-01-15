@@ -8,7 +8,6 @@ import time
 from datetime import datetime, date
 import requests
 from urllib.parse import urlparse, parse_qs
-from fpdf import FPDF
 import io
 
 import glob
@@ -127,6 +126,11 @@ def to_excel(df):
     return output.getvalue()
 
 def to_pdf(df):
+    try:
+        from fpdf import FPDF
+    except ImportError:
+        raise ImportError("Biblioteca 'fpdf2' não instalada. Execute 'pip install fpdf2' para habilitar PDF.")
+
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=8)
